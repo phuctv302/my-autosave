@@ -7,14 +7,14 @@ const Scheduler = require('./scheduler');
 class Redis {
 	//
 
-	constructor(redis_url, redis_options = {}) {
+	constructor(redis_url, redis_auth = {}) {
 		if (!redis_url) {
 			redis_url = process.env.REDIS_URL || 'localhost:6379';
 		}
 
 		this.client = redis.createClient({
 			url: `redis://${redis_url}`,
-			...redis_options,
+			...redis_auth,
 		});
 		this.client.on('error', (err) => console.log(`[!] Redis error: ${err}`));
 		this.client
@@ -22,9 +22,9 @@ class Redis {
 			.then(() => console.log('[*] Redis connect successfully!'));
 	}
 
-	static getInstance() {
+	static getInstance(redis_options) {
 		if (!this.instance) {
-			this.instance = new Redis();
+			this.instance = new Redis(redis_options.url, redis_options.auth);
 		}
 
 		return this.instance;

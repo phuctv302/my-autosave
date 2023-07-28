@@ -4,13 +4,17 @@ const Scheduler = require('./scheduler');
 class AutoSaver {
 	//
 
-	constructor(table_name, batch_size, save_after, callback) {
+	constructor(table_name, batch_size, save_after, callback, redis_options) {
 		if (table_name) {
 			this.table_name = table_name;
 		}
 
 		if (callback) {
 			this.callback = callback;
+		}
+
+		if (redis_options) {
+			this.redis_options = redis_options;
 		}
 
 		this.batch_size = batch_size || 3;
@@ -20,7 +24,7 @@ class AutoSaver {
 	//
 
 	async addData(obj) {
-		await Redis.getInstance().writeBehind(
+		await Redis.getInstance(this.redis_options).writeBehind(
 			this.table_name,
 			obj,
 			this.batch_size,
@@ -38,7 +42,7 @@ class AutoSaver {
 	//
 
 	static async clearData(table, id) {
-		const client = Redis.getInstance().client;
+		const client = Redis.getInstance(this.redis_options).client;
 
 		if (table && id) {
 			const key = `${table}:${id}`;
