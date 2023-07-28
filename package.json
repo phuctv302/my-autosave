@@ -1,6 +1,6 @@
 {
 	"name": "true-autosaver",
-	"version": "1.1.7",
+	"version": "1.1.8",
 	"description": "Autosave service",
 	"main": "services/auto.saver.js",
 	"scripts": {
@@ -15,12 +15,12 @@
 	"license": "ISC",
 	"dependencies": {
 		"async": "^3.2.4",
+		"dotenv": "^16.3.1",
 		"express": "^4.18.1",
 		"node-schedule": "^2.1.0",
 		"redis": "^4.3.1"
 	},
 	"directories": {
 		"test": "test"
-	},
-	"devDependencies": {}
+	}
 }

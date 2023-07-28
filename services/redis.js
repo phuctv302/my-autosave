@@ -1,4 +1,5 @@
 const redis = require('redis');
+require('dotenv').config({ path: './.env' });
 
 const ArrayUtils = require('../utils/array.utils');
 const Scheduler = require('./scheduler');
@@ -6,8 +7,16 @@ const Scheduler = require('./scheduler');
 class Redis {
 	//
 
-	constructor() {
-		this.client = redis.createClient();
+	constructor(redis_url) {
+		if (!redis_url) {
+			redis_url = process.env.REDIS_URL || 'localhost:6379';
+		}
+
+		this.client = redis.createClient({
+			url: `redis://${redis_url}`,
+			username: 'default',
+			password: '5tk4ZlmyVijQrz6gAuKaQdBoUaNJYFI5',
+		});
 		this.client.on('error', (err) => console.log(`[!] Redis error: ${err}`));
 		this.client
 			.connect()
