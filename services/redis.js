@@ -17,12 +17,8 @@ class Redis {
 			...redis_auth,
 		});
 
-		this.client.on('error', (err) =>
-			console.log(`[!] Error connecting Redis: ${err}`)
-		);
-		this.client
-			.connect()
-			.then(() => console.log('[*] Redis connect successfully!'));
+		this.client.on('error', (err) => console.log(`[!] Error connecting Redis: ${err}`));
+		this.client.connect().then(() => console.log('[*] Redis connect successfully!'));
 	}
 
 	static getInstance(redis_options = {}) {
@@ -39,27 +35,29 @@ class Redis {
 		const scheduler = new Scheduler(this.client);
 
 		// 1. hash key
-		const h_key = `${table_name}:${obj.id}`;
+		const h_key = `${table_name}:hash`;
 
 		// 2. write to redis hash key (for creating & updating)
 		await this.updateHash(h_key, obj);
 
 		// 3. Read all data from hash and write into Redis Stream
 		const redisVals = await this.client.hGetAll(h_key);
-		await this.client.xAdd(table_name, '*', redisVals);
+
+		const stream_key = table_name + ':stream';
+		await this.client.xAdd(stream_key, '*', redisVals);
 		console.log(` [+] New entry is added into stream`);
 
 		// 4. Read all data from stream
 
-		const len = await this.client.xLen(table_name);
+		const len = await this.client.xLen(stream_key);
 		if (len == 0) {
-			console.log(` [x] No data in stream ${table_name}`);
+			console.log(` [x] No data in stream ${stream_key}`);
 
-			scheduler.scheduleJob(table_name, `*/${save_after} * * * * *`, callback);
+			scheduler.scheduleJob(stream_key, `*/${save_after} * * * * *`, callback);
 		} else {
 			const streams = await this.client.xRead(
 				{
-					key: table_name,
+					key: stream_key,
 					id: '0-0',
 				},
 				{
@@ -67,24 +65,24 @@ class Redis {
 				}
 			);
 
-			const messages = streams
-				? streams[0].messages.map((mes) => mes.message)
-				: null;
+			const messages = streams ? streams[0].messages.map((mes) => mes.message) : null;
 
 			if (messages && messages.length >= batch_size) {
 				// const data = ArrayUtils.filterUniqueByKey(messages);
 				const data = messages;
 				callback(data);
-				this.client.del(table_name).then((res) => {
+
+				// clean up
+				this.client.del(stream_key).then((res) => {
 					console.log(` [x] Delete stream with code ${res}`);
-					scheduler.cancelJob(table_name);
+					scheduler.cancelJob(stream_key);
+
+					this.client.del(h_key).then((res) => {
+						console.log(`[x] Delete hash key with code ${res}`);
+					});
 				});
 			} else {
-				scheduler.scheduleJob(
-					table_name,
-					`*/${save_after} * * * * *`,
-					callback
-				);
+				scheduler.scheduleJob(stream_key, `*/${save_after} * * * * *`, callback);
 			}
 		}
 
@@ -112,9 +110,7 @@ class Redis {
 			}
 		);
 
-		let messages = streams
-			? streams[0].messages.map((mes) => mes.message)
-			: null;
+		let messages = streams ? streams[0].messages.map((mes) => mes.message) : null;
 
 		return messages;
 	}
@@ -129,6 +125,10 @@ class Redis {
 
 	async setHash(key, obj) {
 		Object.keys(obj).forEach(async (k) => {
+			if (typeof obj[k] === 'object') {
+				obj[k] = JSON.stringify(obj[k]);
+			}
+
 			await this.client.hSet(key, k, String(obj[k]));
 		});
 	}

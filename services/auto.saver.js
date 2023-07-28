@@ -24,9 +24,16 @@ class AutoSaver {
 	//
 
 	async addData(obj) {
+		let data;
+		if (typeof obj === 'object') {
+			data = { ...obj };
+		} else {
+			data = obj;
+		}
+
 		await Redis.getInstance(this.redis_options).writeBehind(
 			this.table_name,
-			obj,
+			data,
 			this.batch_size,
 			this.save_after,
 			this.callback
