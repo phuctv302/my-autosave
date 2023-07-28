@@ -1,28 +1,31 @@
 const schedule = require('node-schedule');
 const redis = require('redis');
 
-client = redis.createClient();
-client.on('error', (err) => console.log(' [!] Redis error: ', err));
-client.connect();
-
 const ArrayUtils = require('../utils/array.utils');
 
 class Scheduler {
+	constructor(redis_client) {
+		this.redis_client = redis_client;
+	}
+
 	//
 
-	static scheduleJob(key, recur_rule, cb) {
+	scheduleJob(key, recur_rule, cb) {
 		schedule.cancelJob(key);
 
 		schedule.scheduleJob(key, recur_rule, async () => {
 			console.log('***');
 
-			const len = await client.xLen(key);
+			const len = await this.redis_client.xLen(key);
 			if (len == 0) {
 				console.log(` [x] No data in stream ${key}`);
 				schedule.cancelJob(key);
 			}
 
-			const res = await client.xRead({ key, id: '0-0' }, { COUNT: 200 });
+			const res = await this.redis_client.xRead(
+				{ key, id: '0-0' },
+				{ COUNT: 200 }
+			);
 
 			const messages = res ? res[0].messages.map((mes) => mes.message) : null;
 
@@ -35,7 +38,7 @@ class Scheduler {
 
 			cb(data);
 
-			client.del(key).then((res) => {
+			this.redis_client.del(key).then((res) => {
 				console.log(' [x] Delete stream successfully, ', res);
 				if (schedule.cancelJob(key)) {
 					console.log(` [x] Job cancelled!`);
@@ -48,7 +51,7 @@ class Scheduler {
 
 	//
 
-	static cancelJob(key) {
+	cancelJob(key) {
 		return schedule.cancelJob(key);
 	}
 }

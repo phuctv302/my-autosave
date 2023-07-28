@@ -9,20 +9,23 @@ class Redis {
 
 	constructor(redis_url, redis_auth = {}) {
 		if (!redis_url) {
-			redis_url = process.env.REDIS_URL || 'localhost:6379';
+			redis_url = 'localhost:6379';
 		}
 
 		this.client = redis.createClient({
 			url: `redis://${redis_url}`,
 			...redis_auth,
 		});
-		this.client.on('error', (err) => console.log(`[!] Redis error: ${err}`));
+
+		this.client.on('error', (err) =>
+			console.log(`[!] Error connecting Redis: ${err}`)
+		);
 		this.client
 			.connect()
 			.then(() => console.log('[*] Redis connect successfully!'));
 	}
 
-	static getInstance(redis_options) {
+	static getInstance(redis_options = {}) {
 		if (!this.instance) {
 			this.instance = new Redis(redis_options.url, redis_options.auth);
 		}
@@ -33,6 +36,8 @@ class Redis {
 	//
 
 	async writeBehind(table_name, obj, batch_size, save_after, callback) {
+		const scheduler = new Scheduler(this.client);
+
 		// 1. hash key
 		const h_key = `${table_name}:${obj.id}`;
 
@@ -46,11 +51,11 @@ class Redis {
 
 		// 4. Read all data from stream
 
-		const len = await client.xLen(table_name);
+		const len = await this.client.xLen(table_name);
 		if (len == 0) {
 			console.log(` [x] No data in stream ${table_name}`);
 
-			Scheduler.scheduleJob(table_name, `*/${save_after} * * * * *`, callback);
+			scheduler.scheduleJob(table_name, `*/${save_after} * * * * *`, callback);
 		} else {
 			const streams = await this.client.xRead(
 				{
@@ -72,10 +77,10 @@ class Redis {
 				callback(data);
 				this.client.del(table_name).then((res) => {
 					console.log(` [x] Delete stream with code ${res}`);
-					Scheduler.cancelJob(table_name);
+					scheduler.cancelJob(table_name);
 				});
 			} else {
-				Scheduler.scheduleJob(
+				scheduler.scheduleJob(
 					table_name,
 					`*/${save_after} * * * * *`,
 					callback
