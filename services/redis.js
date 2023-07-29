@@ -82,7 +82,7 @@ class Redis {
 					});
 				});
 			} else {
-				scheduler.scheduleJob(stream_key, `*/${save_after} * * * * *`, callback, this.client.del(h_key));
+				scheduler.scheduleJob(stream_key, `*/${save_after} * * * * *`, callback, () => this.client.del(h_key));
 			}
 		}
 
