@@ -53,7 +53,7 @@ class Redis {
 		if (len == 0) {
 			console.log(` [x] No data in stream ${stream_key}`);
 
-			scheduler.scheduleJob(stream_key, `*/${save_after} * * * * *`, callback);
+			scheduler.scheduleJob(stream_key, `*/${save_after} * * * * *`, callback, () => this.client.del(h_key));
 		} else {
 			const streams = await this.client.xRead(
 				{
@@ -82,7 +82,7 @@ class Redis {
 					});
 				});
 			} else {
-				scheduler.scheduleJob(stream_key, `*/${save_after} * * * * *`, callback);
+				scheduler.scheduleJob(stream_key, `*/${save_after} * * * * *`, callback, this.client.del(h_key));
 			}
 		}
 

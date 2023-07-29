@@ -10,7 +10,7 @@ class Scheduler {
 
 	//
 
-	scheduleJob(key, recur_rule, cb) {
+	scheduleJob(key, recur_rule, cb, onSuccess) {
 		schedule.cancelJob(key);
 
 		schedule.scheduleJob(key, recur_rule, async () => {
@@ -22,10 +22,7 @@ class Scheduler {
 				schedule.cancelJob(key);
 			}
 
-			const res = await this.redis_client.xRead(
-				{ key, id: '0-0' },
-				{ COUNT: 200 }
-			);
+			const res = await this.redis_client.xRead({ key, id: '0-0' }, { COUNT: 200 });
 
 			const messages = res ? res[0].messages.map((mes) => mes.message) : null;
 
@@ -38,6 +35,7 @@ class Scheduler {
 
 			cb(data);
 
+			onSuccess();
 			this.redis_client.del(key).then((res) => {
 				console.log(' [x] Delete stream successfully, ', res);
 				if (schedule.cancelJob(key)) {
