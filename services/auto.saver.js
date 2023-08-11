@@ -4,7 +4,7 @@ const Scheduler = require('./scheduler');
 class AutoSaver {
 	//
 
-	constructor(table_name, batch_size, save_after, callback, redis_options) {
+	constructor(table_name, batch_size, save_after, callback, redis_options, mode='development') {
 		if (table_name) {
 			this.table_name = table_name;
 		}
@@ -17,6 +17,7 @@ class AutoSaver {
 			this.redis_options = redis_options;
 		}
 
+		this.mode = mode;
 		this.batch_size = batch_size || 3;
 		this.save_after = save_after || 10;
 	}
@@ -36,7 +37,8 @@ class AutoSaver {
 			data,
 			this.batch_size,
 			this.save_after,
-			this.callback
+			this.callback,
+			this.mode
 		);
 	}
 
@@ -73,6 +75,10 @@ class AutoSaver {
 
 	setTableName(table_name) {
 		this.table_name = table_name;
+	}
+
+	setMode(mode) {
+		this.mode = mode;
 	}
 }
 

@@ -1,7 +1,6 @@
 const redis = require('redis');
 require('dotenv').config({ path: './.env' });
 
-const ArrayUtils = require('../utils/array.utils');
 const Scheduler = require('./scheduler');
 
 class Redis {
@@ -31,7 +30,7 @@ class Redis {
 
 	//
 
-	async writeBehind(table_name, obj, batch_size, save_after, callback) {
+	async writeBehind(table_name, obj, batch_size, save_after, callback, mode) {
 		const scheduler = new Scheduler(this.client);
 
 		// 1. hash key
@@ -45,15 +44,21 @@ class Redis {
 
 		const stream_key = table_name + ':stream';
 		await this.client.xAdd(stream_key, '*', redisVals);
-		console.log(` [+] New entry is added into stream`);
+
+		if (mode === 'development'){
+			console.log(` [+] New entry is added into stream`);
+		}
 
 		// 4. Read all data from stream
 
 		const len = await this.client.xLen(stream_key);
 		if (len == 0) {
-			console.log(` [x] No data in stream ${stream_key}`);
 
-			scheduler.scheduleJob(stream_key, `*/${save_after} * * * * *`, callback, () => this.client.del(h_key));
+			if (mode === 'development'){
+				console.log(` [x] No data in stream ${stream_key}`);
+			}
+
+			scheduler.scheduleJob(stream_key, `*/${save_after} * * * * *`, callback, () => this.client.del(h_key), mode);
 		} else {
 			const streams = await this.client.xRead(
 				{
@@ -70,19 +75,27 @@ class Redis {
 			if (messages && messages.length >= batch_size) {
 				// const data = ArrayUtils.filterUniqueByKey(messages);
 				const data = messages;
-				callback(data);
+				if (data){
+					callback(data);
+				}
 
 				// clean up
 				this.client.del(stream_key).then((res) => {
-					console.log(` [x] Delete stream with code ${res}`);
+
+					if (mode === 'development'){
+						console.log(` [x] Delete stream with code ${res}`);
+					}
+
 					scheduler.cancelJob(stream_key);
 
 					this.client.del(h_key).then((res) => {
-						console.log(`[x] Delete hash key with code ${res}`);
+						if (mode === 'development'){
+							console.log(`[x] Delete hash key with code ${res}`);
+						}
 					});
 				});
 			} else {
-				scheduler.scheduleJob(stream_key, `*/${save_after} * * * * *`, callback, () => this.client.del(h_key));
+				scheduler.scheduleJob(stream_key, `*/${save_after} * * * * *`, callback, () => this.client.del(h_key), mode);
 			}
 		}
 
