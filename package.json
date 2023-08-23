@@ -1,7 +1,7 @@
 {
 	"name": "true-autosaver",
 	"version": "1.2.9",
-	"description": "Autosave service",
+	"description": "Autosave service for caching data",
 	"main": "services/auto.saver.js",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1"
