@@ -1,8 +1,8 @@
 const schedule = require('node-schedule');
 
 class Scheduler {
-	constructor(redis_client) {
-		this.redis_client = redis_client;
+	constructor(storage_client) {
+		this.storage_client = storage_client;
 	}
 
 	//
@@ -12,7 +12,7 @@ class Scheduler {
 
 		schedule.scheduleJob(key, recur_rule, async () => {
 
-			const len = await this.redis_client.xLen(key);
+			const len = await this.storage_client.xLen(key);
 			if (len == 0) {
 				if (mode === 'development'){
 					console.log(` [x] No data in stream ${key}`);
@@ -20,7 +20,7 @@ class Scheduler {
 				schedule.cancelJob(key);
 			}
 
-			const res = await this.redis_client.xRead({ key, id: '0-0' }, { COUNT: 200 });
+			const res = await this.storage_client.xRead({ key, id: '0-0' }, { COUNT: 200 });
 
 			const messages = res ? res[0].messages.map((mes) => mes.message) : null;
 
@@ -35,7 +35,7 @@ class Scheduler {
 			}
 
 			onSuccess();
-			this.redis_client.del(key).then((res) => {
+			this.storage_client.del(key).then((res) => {
 				if (mode === 'development'){
 					console.log(' [x] Delete stream successfully, ', res);
 				}

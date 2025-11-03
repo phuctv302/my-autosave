@@ -4,7 +4,10 @@
 	"description": "Autosave service for caching data",
 	"main": "services/auto.saver.js",
 	"scripts": {
-		"test": "echo \"Error: no test specified\" && exit 1"
+		"test": "node test/test-local-storage.js",
+		"test:quick": "node test/quick-test.js",
+		"test:local": "node test/test-local-storage.js",
+		"test:redis": "node test/test-redis-storage.js"
 	},
 	"keywords": [
 		"autosave",

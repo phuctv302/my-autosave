@@ -1,25 +1,29 @@
 const Redis = require('./redis');
+const LocalStorage = require('./local.storage');
 const Scheduler = require('./scheduler');
 
 class AutoSaver {
 	//
 
-	constructor(table_name, batch_size, save_after, callback, redis_options, mode='development') {
-		if (table_name) {
-			this.table_name = table_name;
-		}
+	constructor(config = {}) {
+		// Destructure config object with default values
+		const {
+			table_name,
+			batch_size = 3,
+			save_after = 10,
+			callback,
+			storage_type = 'redis',
+			redis_options,
+			mode = 'development'
+		} = config;
 
-		if (callback) {
-			this.callback = callback;
-		}
-
-		if (redis_options) {
-			this.redis_options = redis_options;
-		}
-
+		this.table_name = table_name;
+		this.callback = callback;
+		this.redis_options = redis_options;
+		this.storage_type = storage_type;
 		this.mode = mode;
-		this.batch_size = batch_size || 3;
-		this.save_after = save_after || 10;
+		this.batch_size = batch_size;
+		this.save_after = save_after;
 	}
 
 	//
@@ -32,7 +36,12 @@ class AutoSaver {
 			data = obj;
 		}
 
-		await Redis.getInstance(this.redis_options).writeBehind(
+		// Choose storage backend based on storage_type
+		const storage = this.storage_type === 'local'
+			? LocalStorage.getInstance()
+			: Redis.getInstance(this.redis_options);
+
+		await storage.writeBehind(
 			this.table_name,
 			data,
 			this.batch_size,
