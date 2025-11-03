@@ -1,6 +1,6 @@
 {
 	"name": "true-autosaver",
-	"version": "1.3.0",
+	"version": "1.4.0",
 	"description": "Autosave service for caching data",
 	"main": "services/auto.saver.js",
 	"scripts": {
